@@ -11,9 +11,10 @@ from torch_geometric.typing import Adj, OptTensor
 from torch_geometric.utils import is_sparse, to_edge_index
 
 from src.models.layers.ngcf_conv import NGCFConv
+from src.models.model import Model, BPRLoss
 
 
-class NGCF(torch.nn.Module):
+class NGCF(Model):
     def __init__(
         self,
         num_nodes: int,
@@ -21,38 +22,36 @@ class NGCF(torch.nn.Module):
         num_layers: int,
         dropout: float = 0.1,
         alpha: Optional[Union[float, Tensor]] = None,
+        init_method: str = 'xavier',
+        features_dim: Optional[int] = None,
         **kwargs,
     ):
-        super().__init__()
-
-        self.num_nodes = num_nodes
-        self.embedding_dim = embedding_dim
-        self.num_layers = num_layers
-
-        if alpha is None:
-            alpha = 1. / (num_layers + 1)
-
-        if isinstance(alpha, Tensor):
-            assert alpha.size(0) == num_layers + 1
-        else:
-            alpha = torch.tensor([alpha] * (num_layers + 1))
-        self.register_buffer('alpha', alpha)
+        super().__init__(num_nodes, embedding_dim, num_layers, alpha, **kwargs)
 
         self.embedding = Embedding(num_nodes, embedding_dim)
-        self.convs = ModuleList([NGCFConv(in_size=embedding_dim, out_size=embedding_dim, dropout=dropout, **kwargs) for _ in range(num_layers)])
+        in_size = features_dim if features_dim is not None else embedding_dim
+        out_size = features_dim if features_dim is not None else embedding_dim
+        self.convs = ModuleList([NGCFConv(in_size=in_size, out_size=out_size, dropout=dropout, **kwargs)] +
+                                [NGCFConv(in_size=out_size, out_size=out_size, dropout=dropout, **kwargs) for _ in range(num_layers-1)])
+        self.init_method = init_method
 
         self.reset_parameters()
 
     def reset_parameters(self):
-        torch.nn.init.xavier_uniform_(self.embedding.weight)
+        if self.init_method == 'xavier':
+            torch.nn.init.xavier_uniform_(self.embedding.weight)
+        elif self.init_method == 'normal':
+            torch.nn.init.normal_(self.embedding.weight, std=0.01)
         for conv in self.convs:
             conv.reset_parameters()
 
     def get_embedding(
         self,
         edge_index: Adj,
+        x: OptTensor = None,
     ) -> Tensor:
-        x = self.embedding.weight
+        if x is None:
+            x = self.embedding.weight
         out = x * self.alpha[0]
 
         for i in range(self.num_layers):
@@ -64,6 +63,7 @@ class NGCF(torch.nn.Module):
     def forward(
         self,
         edge_index: Adj,
+        x: OptTensor = None,
         edge_label_index: OptTensor = None,
     ) -> Tensor:
         if edge_label_index is None:
@@ -72,7 +72,7 @@ class NGCF(torch.nn.Module):
             else:
                 edge_label_index = edge_index
 
-        out = self.get_embedding(edge_index)
+        out = self.get_embedding(edge_index, x)
 
         out_src = out[edge_label_index[0]]
         out_dst = out[edge_label_index[1]]
@@ -83,6 +83,7 @@ class NGCF(torch.nn.Module):
         self,
         edge_index: Adj,
         edge_label_index: OptTensor = None,
+        edge_weight: OptTensor = None,
         prob: bool = False,
     ) -> Tensor:
         pred = self(edge_index, edge_label_index, edge_weight).sigmoid()
@@ -123,34 +124,11 @@ class NGCF(torch.nn.Module):
         pos_edge_rank: Tensor,
         neg_edge_rank: Tensor,
         node_id: Optional[Tensor] = None,
+        input_x: OptTensor = None,
         lambda_reg: float = 1e-4,
         **kwargs,
     ) -> Tensor:
         loss_fn = BPRLoss(lambda_reg, **kwargs)
-        emb = self.embedding.weight
+        emb = self.embedding.weight if input_x is None else input_x
         emb = emb if node_id is None else emb[node_id]
         return loss_fn(pos_edge_rank, neg_edge_rank, emb)
-
-    def __repr__(self) -> str:
-        return (f'{self.__class__.__name__}({self.num_nodes}, '
-                f'{self.embedding_dim}, num_layers={self.num_layers})')
-
-
-class BPRLoss(_Loss):
-    __constants__ = ['lambda_reg']
-    lambda_reg: float
-
-    def __init__(self, lambda_reg: float = 0, **kwargs):
-        super().__init__(None, None, "sum", **kwargs)
-        self.lambda_reg = lambda_reg
-
-    def forward(self, positives: Tensor, negatives: Tensor,
-                parameters: Tensor = None) -> Tensor:
-        log_prob = F.logsigmoid(positives - negatives).mean()
-
-        regularization = 0
-        if self.lambda_reg != 0:
-            regularization = self.lambda_reg * parameters.norm(p=2).pow(2)
-            regularization = regularization / positives.size(0)
-
-        return -log_prob + regularization

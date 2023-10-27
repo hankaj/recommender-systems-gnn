@@ -10,38 +10,32 @@ from torch_geometric.nn.conv import LGConv
 from torch_geometric.typing import Adj, OptTensor
 from torch_geometric.utils import is_sparse, to_edge_index
 
+from src.models.model import Model, BPRLoss
 
-class LightGCN(torch.nn.Module):
+
+class LightGCN(Model):
     def __init__(
         self,
         num_nodes: int,
         embedding_dim: int,
         num_layers: int,
         alpha: Optional[Union[float, Tensor]] = None,
+        init_method: str = 'xavier',
         **kwargs,
     ):
-        super().__init__()
-
-        self.num_nodes = num_nodes
-        self.embedding_dim = embedding_dim
-        self.num_layers = num_layers
-
-        if alpha is None:
-            alpha = 1. / (num_layers + 1)
-
-        if isinstance(alpha, Tensor):
-            assert alpha.size(0) == num_layers + 1
-        else:
-            alpha = torch.tensor([alpha] * (num_layers + 1))
-        self.register_buffer('alpha', alpha)
+        super().__init__(num_nodes, embedding_dim, num_layers, alpha, **kwargs)
 
         self.embedding = Embedding(num_nodes, embedding_dim)
         self.convs = ModuleList([LGConv(**kwargs) for _ in range(num_layers)])
+        self.init_method = init_method
 
         self.reset_parameters()
 
     def reset_parameters(self):
-        torch.nn.init.xavier_uniform_(self.embedding.weight)
+        if self.init_method == 'xavier':
+            torch.nn.init.xavier_uniform_(self.embedding.weight)
+        elif self.init_method == 'normal':
+            torch.nn.init.normal_(self.embedding.weight, std=0.01)
         for conv in self.convs:
             conv.reset_parameters()
 
@@ -62,6 +56,7 @@ class LightGCN(torch.nn.Module):
     def forward(
         self,
         edge_index: Adj,
+        input_x: OptTensor = None,
         edge_label_index: OptTensor = None,
         edge_weight: OptTensor = None,
     ) -> Tensor:
@@ -123,6 +118,7 @@ class LightGCN(torch.nn.Module):
         pos_edge_rank: Tensor,
         neg_edge_rank: Tensor,
         node_id: Optional[Tensor] = None,
+        input_x: OptTensor = None,
         lambda_reg: float = 1e-4,
         **kwargs,
     ) -> Tensor:
@@ -130,27 +126,3 @@ class LightGCN(torch.nn.Module):
         emb = self.embedding.weight
         emb = emb if node_id is None else emb[node_id]
         return loss_fn(pos_edge_rank, neg_edge_rank, emb)
-
-    def __repr__(self) -> str:
-        return (f'{self.__class__.__name__}({self.num_nodes}, '
-                f'{self.embedding_dim}, num_layers={self.num_layers})')
-
-
-class BPRLoss(_Loss):
-    __constants__ = ['lambda_reg']
-    lambda_reg: float
-
-    def __init__(self, lambda_reg: float = 0, **kwargs):
-        super().__init__(None, None, "sum", **kwargs)
-        self.lambda_reg = lambda_reg
-
-    def forward(self, positives: Tensor, negatives: Tensor,
-                parameters: Tensor = None) -> Tensor:
-        log_prob = F.logsigmoid(positives - negatives).mean()
-
-        regularization = 0
-        if self.lambda_reg != 0:
-            regularization = self.lambda_reg * parameters.norm(p=2).pow(2)
-            regularization = regularization / positives.size(0)
-
-        return -log_prob + regularization
