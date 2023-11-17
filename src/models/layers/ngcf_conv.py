@@ -37,7 +37,7 @@ class NGCFConv(MessagePassing):
     out = self.propagate(edge_index, x=x, norm=norm)
 
     # Perform update after aggregation
-    # out += self.W1(x)
+    out += self.W1(x) # nie ma w dgl ale wg papera i colaba powinno byc
     out = self.dropout(out)
     return self.leaky_relu(out)
 
