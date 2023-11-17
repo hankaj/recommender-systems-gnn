@@ -9,7 +9,10 @@ import argparse
 
 
 def main(dataset_name, batch_size, num_layers, embedding_dim, num_epochs, init_method, model_name, use_node_features):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dataset = Dataset(dataset_name)
+    dataset.data = dataset.data.to(device)
+
     train_edge_label_index = dataset.train_edge_label_index
     num_users, num_items, num_nodes = dataset.num_users, dataset.num_items, dataset.num_nodes
     features_dim = dataset.data.x.size(1) if use_node_features else None
@@ -27,7 +30,7 @@ def main(dataset_name, batch_size, num_layers, embedding_dim, num_epochs, init_m
             embedding_dim=embedding_dim,
             num_layers=num_layers,
             init_method=init_method,
-        )
+        ).to(device)
     elif model_name == 'NGCF':
         model = NGCF(
             num_nodes=num_nodes,
@@ -35,11 +38,11 @@ def main(dataset_name, batch_size, num_layers, embedding_dim, num_epochs, init_m
             num_layers=num_layers,
             init_method=init_method,
             features_dim=features_dim
-        )
+        ).to(device)
     else:
         raise ValueError(f"Invalid model name: {model_name}")
     for epoch in range(num_epochs):
-        loss = train(model, dataset.data, train_loader, train_edge_label_index, num_users, num_items, use_node_features)
+        loss = train(model, dataset.data, train_loader, train_edge_label_index, num_users, num_items, use_node_features, device)
         precision, recall, hits = test(model, dataset.data, train_edge_label_index, num_users, 20, batch_size, use_node_features)
         print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Precision@20: '
             f'{precision:.4f}, Recall@20: {recall:.4f}, HR@20: {hits:.4f}')
