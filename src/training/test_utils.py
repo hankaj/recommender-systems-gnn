@@ -1,5 +1,7 @@
 from torch_geometric.utils import degree
 import torch
+import tqdm
+from typing import Tuple
 
 @torch.no_grad()
 def test(model, data, train_edge_label_index, num_users, k: int, batch_size: int, use_node_features):
@@ -8,10 +10,11 @@ def test(model, data, train_edge_label_index, num_users, k: int, batch_size: int
     else:
         input_x = None
     emb = model.get_embedding(data.edge_index, input_x)
+    num_test_users = max(data.edge_index[0]) + 1
     user_emb, item_emb = emb[:num_users], emb[num_users:]
 
     precision = recall = hits = total_examples = 0
-    for start in range(0, num_users, batch_size):
+    for start in range(0, num_test_users, batch_size):
         end = start + batch_size
         logits = user_emb[start:end] @ item_emb.t()
 
@@ -39,3 +42,43 @@ def test(model, data, train_edge_label_index, num_users, k: int, batch_size: int
         total_examples += int((node_count > 0).sum())
 
     return precision / total_examples, recall / total_examples, hits / num_users
+
+@torch.no_grad()
+def test_kg(
+    model,
+    data,
+    train_edge_label_index,
+    batch_size: int,
+    num_users: int,
+    num_items: int,
+    k: int = 10,
+    log: bool = True,
+) -> Tuple[float, float, float]:
+    head_index, tail_index = data.edge_index[0], data.edge_index[1]
+    rel_type = torch.tensor(data.edge_type[0]) # only one relation type to test- user item
+    num_test_users = max(head_index) + 1
+    arange = range(num_test_users)
+    arange = tqdm(arange) if log else arange
+
+    precision = recall = total_hit = 0
+    for h in arange:
+        scores = []
+        tail_indices = torch.arange(num_users, num_users + num_items, device=head_index.device)
+
+        for ts in tail_indices.split(batch_size):
+            scores.append(model(torch.tensor(h).expand_as(ts), rel_type.expand_as(ts), ts))
+        scores = torch.cat(scores)
+        label_index = tail_index[head_index == h] - num_users
+        train_label_index = train_edge_label_index[1][train_edge_label_index[0] == h] - num_users
+        train_label_index = train_label_index[train_label_index < num_items]
+        scores[train_label_index] = float('-inf')
+        topk_index = scores.topk(k, dim=-1).indices
+
+        num_hits = torch.isin(label_index, topk_index).sum().item()
+        total_hit += num_hits > 0
+        precision += num_hits / k
+        
+        recall += 1 if len(label_index) == 0 else num_hits / len(label_index)
+
+
+    return precision / num_test_users, recall / num_test_users, total_hit / num_test_users
