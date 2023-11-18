@@ -39,7 +39,7 @@ def test(model, data, train_edge_index, num_users, num_items):
     return test_kg(model, data, train_edge_index, batch_size=1000, num_users=num_users, num_items=num_items,
                    k=20, log=False)
 
-def main(model_name, batch_size, num_epochs, use_only_user_item):
+def main(model_name, batch_size, num_epochs, use_only_user_item, hidden_channels):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     train_dataset = KGMovieLens100K(split='train', use_only_item_user=use_only_user_item)
@@ -51,7 +51,7 @@ def main(model_name, batch_size, num_epochs, use_only_user_item):
     model = model_map[model_name](
     num_nodes=train_data.num_nodes,
     num_relations=train_data.num_edge_types,
-    hidden_channels=50,
+    hidden_channels=hidden_channels,
     **model_arg_map.get(model_name, {}),
     ).to(device)
 
@@ -94,5 +94,6 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=8000, help='Batch size')
     parser.add_argument('--num_epochs', type=int, default=10, help='Number of epochs')
     parser.add_argument('--use_only_user_item', action='store_true', help='Whether to use only user-item edges in the model')
+    parser.add_argument('--hidden_channels', type=int, default=50, help='Hidden channels dimension')
     args = parser.parse_args()
-    main(args.model, args.batch_size, args.num_epochs, args.use_only_user_item)
+    main(args.model, args.batch_size, args.num_epochs, args.use_only_user_item, args.hidden_channels)
