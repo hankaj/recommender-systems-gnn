@@ -79,16 +79,6 @@ class NGCF(Model):
 
         return (out_src * out_dst).sum(dim=-1)
 
-    def predict_link(
-        self,
-        edge_index: Adj,
-        edge_label_index: OptTensor = None,
-        edge_weight: OptTensor = None,
-        prob: bool = False,
-    ) -> Tensor:
-        pred = self(edge_index, edge_label_index, edge_weight).sigmoid()
-        return pred if prob else pred.round()
-
     def recommend(
         self,
         edge_index: Adj,
@@ -113,11 +103,6 @@ class NGCF(Model):
             top_index = dst_index[top_index.view(-1)].view(*top_index.size())
 
         return top_index
-
-    def link_pred_loss(self, pred: Tensor, edge_label: Tensor,
-                       **kwargs) -> Tensor:
-        loss_fn = torch.nn.BCEWithLogitsLoss(**kwargs)
-        return loss_fn(pred, edge_label.to(pred.dtype))
 
     def recommendation_loss(
         self,
