@@ -1,5 +1,6 @@
 import argparse
 import os.path as osp
+import time
 
 import torch
 import torch.optim as optim
@@ -71,6 +72,8 @@ def main(model_name, batch_size, num_epochs, use_only_user_item):
     optimizer = optimizer_map[model_name]   
 
     precision_list, recall_list, hits_list = [], [], []
+
+    start = time.time()
     for epoch in range(num_epochs):
         loss = train(model, loader, optimizer)
         precision, recall, hits = test(model, test_data, train_data.edge_index, num_users, num_items)
@@ -79,9 +82,11 @@ def main(model_name, batch_size, num_epochs, use_only_user_item):
         hits_list.append(hits)
         print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Precision@20: '
             f'{precision:.4f}, Recall@20: {recall:.4f}, HR@20: {hits:.4f}')
+    end = time.time()
+    training_time = end - start
         
     args = [model, batch_size, num_epochs, use_only_user_item]
-    save_metrics_to_file('kg', args, precision_list, recall_list, hits_list)
+    save_metrics_to_file('kg', training_time, args, precision_list, recall_list, hits_list)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Recommender System using KG')

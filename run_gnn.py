@@ -6,6 +6,7 @@ from src.training.test_utils import test
 from src.dataloading.dataset import Dataset
 from src.utils import save_metrics_to_file
 import argparse
+import time
 
 
 
@@ -42,7 +43,10 @@ def main(dataset_name, batch_size, num_layers, embedding_dim, num_epochs, init_m
         ).to(device)
     else:
         raise ValueError(f"Invalid model name: {model_name}")
+    
     precision_list, recall_list, hits_list = [], [], []
+
+    start = time.time()
     for epoch in range(num_epochs):
         loss = train(model, dataset.data, train_loader, train_edge_label_index, num_users, num_items, use_node_features, device)
         precision, recall, hits = test(model, dataset.data, train_edge_label_index, num_users, 20, batch_size, use_node_features)
@@ -51,8 +55,10 @@ def main(dataset_name, batch_size, num_layers, embedding_dim, num_epochs, init_m
         hits_list.append(hits)
         print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Precision@20: '
             f'{precision:.4f}, Recall@20: {recall:.4f}, HR@20: {hits:.4f}')
+    end = time.time()
+    training_time = end - start
     args = [dataset_name, batch_size, num_layers, embedding_dim, num_epochs, init_method, model_name, use_node_features]  
-    save_metrics_to_file('gnn', args, precision_list, recall_list, hits_list)
+    save_metrics_to_file('gnn', training_time, args, precision_list, recall_list, hits_list)
 
 
 if __name__ == '__main__':
