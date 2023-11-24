@@ -1,0 +1,5 @@
+# Arguments: [ComplEx(3595, num_relations=7, hidden_channels=50), 8000, 2, False]
+# Training time: 3.3405539989471436
+Epoch,Precision,Recall,Hits
+0,tensor(0.0089),tensor(0.0107),tensor(0.1558)
+1,tensor(0.0084),tensor(0.0101),tensor(0.1494)

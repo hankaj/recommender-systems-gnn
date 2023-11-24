@@ -1,0 +1,12 @@
+# Arguments: [TransE(3595, num_relations=7, hidden_channels=50), 8000, 10, False]
+Epoch,Precision,Recall,Hits
+0,tensor(0.0266),tensor(0.0185),tensor(0.3485)
+1,tensor(0.0289),tensor(0.0180),tensor(0.3658)
+2,tensor(0.0287),tensor(0.0173),tensor(0.3528)
+3,tensor(0.0285),tensor(0.0173),tensor(0.3485)
+4,tensor(0.0248),tensor(0.0150),tensor(0.3009)
+5,tensor(0.0264),tensor(0.0163),tensor(0.3160)
+6,tensor(0.0259),tensor(0.0161),tensor(0.3139)
+7,tensor(0.0212),tensor(0.0141),tensor(0.2597)
+8,tensor(0.0188),tensor(0.0135),tensor(0.2532)
+9,tensor(0.0189),tensor(0.0127),tensor(0.2381)
