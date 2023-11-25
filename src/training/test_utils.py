@@ -55,7 +55,7 @@ def test_kg(
     log: bool = True,
 ) -> Tuple[float, float, float]:
     head_index, tail_index = data.edge_index[0], data.edge_index[1]
-    rel_type = torch.tensor(data.edge_type[0]) # only one relation type to test- user item
+    rel_type = torch.tensor(data.edge_type[0], device=head_index.device) # only one relation type to test- user item
     num_test_users = max(head_index) + 1
     arange = range(num_test_users)
     arange = tqdm(arange) if log else arange
