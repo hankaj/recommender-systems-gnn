@@ -35,7 +35,6 @@ def train(model, loader, optimizer):
 @torch.no_grad()
 def test(model, data, train_edge_index, num_users, num_items):
     model.eval()
-    print(num_users, num_items)
     return test_kg(model, data, train_edge_index, batch_size=1000, num_users=num_users, num_items=num_items,
                    k=20, log=False)
 

@@ -55,7 +55,8 @@ def test_kg(
     log: bool = True,
 ) -> Tuple[float, float, float]:
     head_index, tail_index = data.edge_index[0], data.edge_index[1]
-    rel_type = torch.tensor(data.edge_type[0], device=head_index.device) # only one relation type to test- user item
+    device=head_index.device
+    rel_type = torch.tensor(data.edge_type[0], device=device) # only one relation type to test- user item
     num_test_users = max(head_index) + 1
     arange = range(num_test_users)
     arange = tqdm(arange) if log else arange
@@ -63,10 +64,10 @@ def test_kg(
     precision = recall = total_hit = 0
     for h in arange:
         scores = []
-        tail_indices = torch.arange(num_users, num_users + num_items, device=head_index.device)
+        tail_indices = torch.arange(num_users, num_users + num_items, device=device)
 
         for ts in tail_indices.split(batch_size):
-            scores.append(model(torch.tensor(h).expand_as(ts), rel_type.expand_as(ts), ts))
+            scores.append(model(torch.tensor(h, device=device).expand_as(ts), rel_type.expand_as(ts), ts))
         scores = torch.cat(scores)
         label_index = tail_index[head_index == h] - num_users
         train_label_index = train_edge_label_index[1][train_edge_label_index[0] == h] - num_users
