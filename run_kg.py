@@ -77,9 +77,9 @@ def main(model_name, batch_size, num_epochs, use_only_user_item, hidden_channels
         loss = train(model, loader, optimizer)
         precision, recall, hits = test(model, test_data, train_data.edge_index, num_users, num_items)
         loss_list.append(loss)
-        precision_list.append(precision)
-        recall_list.append(recall)
-        hits_list.append(hits)
+        precision_list.append(precision.item())
+        recall_list.append(recall.item())
+        hits_list.append(hits.item())
         print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Precision@20: '
             f'{precision:.4f}, Recall@20: {recall:.4f}, HR@20: {hits:.4f}')
     end = time.time()
