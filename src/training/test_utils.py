@@ -10,7 +10,7 @@ def test(model, data, train_edge_label_index, num_users, k: int, batch_size: int
     else:
         input_x = None
     emb = model.get_embedding(data.edge_index, input_x)
-    num_test_users = max(data.edge_index[0]) + 1
+    num_test_users = max(data.edge_label_index[0]) + 1
     user_emb, item_emb = emb[:num_users], emb[num_users:]
 
     precision = recall = hits = total_examples = 0
@@ -41,7 +41,7 @@ def test(model, data, train_edge_label_index, num_users, k: int, batch_size: int
         hits += float((isin_mat.sum(dim=-1) > 0).sum())
         total_examples += int((node_count > 0).sum())
 
-    return precision / total_examples, recall / total_examples, hits / num_users
+    return precision / total_examples, recall / total_examples, hits / total_examples
 
 @torch.no_grad()
 def test_kg(
@@ -69,7 +69,12 @@ def test_kg(
         for ts in tail_indices.split(batch_size):
             scores.append(model(torch.tensor(h, device=device).expand_as(ts), rel_type.expand_as(ts), ts))
         scores = torch.cat(scores)
-        label_index = tail_index[head_index == h] - num_users
+        label_index = tail_index[head_index == h] - num_test_users
+        print(len(label_index) )
+        if len(label_index) == 0: # no test data for this user
+            num_test_users -=1
+            continue
+
         train_label_index = train_edge_label_index[1][train_edge_label_index[0] == h] - num_users
         train_label_index = train_label_index[train_label_index < num_items]
         scores[train_label_index] = float('-inf')
@@ -78,8 +83,8 @@ def test_kg(
         num_hits = torch.isin(label_index, topk_index).sum().item()
         total_hit += num_hits > 0
         precision += num_hits / k
-        
-        recall += 1 if len(label_index) == 0 else num_hits / len(label_index)
+        recall += num_hits / len(label_index)
+        break
 
-
+    print("num_test_users", num_test_users)
     return precision / num_test_users, recall / num_test_users, total_hit / num_test_users
