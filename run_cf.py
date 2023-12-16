@@ -16,6 +16,7 @@ def main(dataset_name, batch_size, num_layers, embedding_dim, num_epochs, init_m
     dataset.data = dataset.data.to(device)
 
     train_edge_label_index = dataset.train_edge_label_index
+    print(train_edge_label_index)
     num_users, num_items, num_nodes = dataset.num_users, dataset.num_items, dataset.num_nodes
     features_dim = dataset.data.x.size(1) if use_node_features else None
     train_loader = torch.utils.data.DataLoader(
