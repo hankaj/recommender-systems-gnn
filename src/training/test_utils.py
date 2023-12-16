@@ -58,6 +58,7 @@ def test_kg(
     device=head_index.device
     rel_type = torch.tensor(data.edge_type[0], device=device) # only one relation type to test- user item
     num_test_users = max(head_index) + 1
+
     arange = range(num_test_users)
     arange = tqdm(arange) if log else arange
 
@@ -69,8 +70,7 @@ def test_kg(
         for ts in tail_indices.split(batch_size):
             scores.append(model(torch.tensor(h, device=device).expand_as(ts), rel_type.expand_as(ts), ts))
         scores = torch.cat(scores)
-        label_index = tail_index[head_index == h] - num_test_users
-        print(len(label_index) )
+        label_index = tail_index[head_index == h] - num_users
         if len(label_index) == 0: # no test data for this user
             num_test_users -=1
             continue
@@ -84,7 +84,5 @@ def test_kg(
         total_hit += num_hits > 0
         precision += num_hits / k
         recall += num_hits / len(label_index)
-        break
 
-    print("num_test_users", num_test_users)
     return precision / num_test_users, recall / num_test_users, total_hit / num_test_users

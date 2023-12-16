@@ -167,7 +167,7 @@ class KGMovieLens100K(InMemoryDataset):
             dst = [movie_mapping[idx] for idx in df['movieId']]
             edge_index = torch.tensor([src, dst])
             # only users in test df, but all movies
-            data['user'].num_nodes = max(src) + 1
+            data['user'].num_nodes = len(user_mapping)
             data['movie'].num_nodes = len(movie_mapping)
             data['user', 'rates', 'movie'].edge_index = edge_index
 
