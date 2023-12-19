@@ -33,11 +33,10 @@ class NGCFConv(MessagePassing):
     norm = deg_inv_sqrt[src] * deg_inv_sqrt[dst]
 
     # Start propagating messages
-    # out = self.propagate(edge_index, x=(x, x), norm=norm) # po co (x, x)
     out = self.propagate(edge_index, x=x, norm=norm)
 
     # Perform update after aggregation
-    out += self.W1(x) # nie ma w dgl ale wg papera i colaba powinno byc
+    out += self.W1(x)
     out = self.dropout(out)
     return self.leaky_relu(out)
 

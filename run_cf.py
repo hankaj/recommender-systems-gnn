@@ -16,7 +16,6 @@ def main(dataset_name, batch_size, num_layers, embedding_dim, num_epochs, init_m
     dataset.data = dataset.data.to(device)
 
     train_edge_label_index = dataset.train_edge_label_index
-    print(train_edge_label_index)
     num_users, num_items, num_nodes = dataset.num_users, dataset.num_items, dataset.num_nodes
     features_dim = dataset.data.x.size(1) if use_node_features else None
     train_loader = torch.utils.data.DataLoader(
@@ -60,7 +59,7 @@ def main(dataset_name, batch_size, num_layers, embedding_dim, num_epochs, init_m
     end = time.time()
     training_time = end - start
     args = [dataset_name, batch_size, num_layers, embedding_dim, num_epochs, init_method, model_name, use_node_features]  
-    save_metrics_to_file('gnn', training_time, args, loss_list, precision_list, recall_list, hits_list)
+    save_metrics_to_file('cf', training_time, args, loss_list, precision_list, recall_list, hits_list)
 
 
 if __name__ == '__main__':
