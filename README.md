@@ -2,7 +2,7 @@
 
 ## How to Run the Project
 
-Follow these steps to run the recommender-systems-gnn project:
+Make sure you have Python and Rust installed. Follow these steps to run the recommender-systems-gnn project:
 
 1. Navigate to the project directory:
     ```bash
@@ -14,11 +14,18 @@ Follow these steps to run the recommender-systems-gnn project:
     pip install -r requirements.txt
     ```
 
-3. Run the collaborative filtering models remembering to set the desired parameters:
+3. Run the collaborative filtering model remembering to set the desired parameters:
     ```bash
     python run_cf.py
     ```
-    Or run knowledge graph models also setting the paramters:
+
+4. Run the knowledge graph model remembering to set the desired parameters:
     ```bash
-    python run_cf.py
+    python run_kg.py
+    ```
+
+5. To run multi-associative graph network, first change the directory and run the program then:
+    ```
+    cd witchnet/crates/magds
+    cargo run --example movielens100k-recommend-items
     ```
